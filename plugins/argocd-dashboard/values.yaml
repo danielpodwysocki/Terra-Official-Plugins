@@ -1,6 +1,8 @@
 # configuration
 host:
 prefix: "/argocd"
+# Ingress provider: "envoy-gateway" (default) or "nginx".
+_orion_ingress_provider: envoy-gateway
 
 # This will be autopopulated by Terra in airgapped envs. The default here will be overriden on Terra versions > v1.0.4
 _juno_terra_image_pull_secrets: []

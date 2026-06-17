@@ -1,4 +1,6 @@
 name: webtop
+# Ingress provider: envoy-gateway (default) or nginx
+_orion_ingress_provider: envoy-gateway
 user:
 repo:
 tag:

@@ -1,5 +1,7 @@
 # Kuiper-injected standard values — do not remove
 name: gitea
+# Ingress provider: envoy-gateway (default) or nginx
+_orion_ingress_provider: envoy-gateway
 user:
 group:
 cpu: "1"

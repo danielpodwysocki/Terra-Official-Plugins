@@ -1,3 +1,4 @@
+{{- if eq (.Values._orion_ingress_provider | default "envoy-gateway") "nginx" }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -23,3 +24,68 @@ spec:
                 name: argocd-server
                 port:
                   number: 80
+{{- else }}
+# Envoy Gateway. HTTPRoute (path -> argocd-server) + SecurityPolicy whose
+# extAuth points at the genesis auth-service endpoint. genesis lives in another
+# namespace, so we reference it via an EG Backend(FQDN) local to this namespace
+# (the same FQDN the nginx auth-url used) rather than a cross-ns Service ref.
+# Note: the nginx auth-signin redirect (/unauthorized/) has no EG equivalent;
+# the gating itself is preserved 1:1 (every path on this route is gated).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: "{{ .Release.Name }}-argocd-server"
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  parentRefs:
+    - name: {{ .Values._orion_gateway_name | default "juno" }}
+      namespace: {{ .Values._orion_gateway_namespace | default "envoy-gateway-system" }}
+  hostnames:
+    - {{ .Values.host }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: "{{ .Values.prefix }}"
+      backendRefs:
+        - name: argocd-server
+          port: 80
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: "{{ .Release.Name }}-auth-backend"
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  endpoints:
+    - fqdn:
+        hostname: "genesis.{{ .Release.Namespace }}.svc.cluster.local"
+        port: 3000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: "{{ .Release.Name }}-auth-service"
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: "{{ .Release.Name }}-argocd-server"
+  extAuth:
+    failOpen: false
+    headersToExtAuth:
+      - Cookie
+    http:
+      backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: "{{ .Release.Name }}-auth-backend"
+      pathOverride: "/api/auth-service/{{ .Release.Name }}/"
+{{- end }}

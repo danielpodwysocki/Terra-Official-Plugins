@@ -1,4 +1,6 @@
 name: webui
+# Ingress backend: "envoy-gateway" (default) or "nginx" (also valid).
+_orion_ingress_provider: envoy-gateway
 user:
 webtop_repo:
 webtop_tag:

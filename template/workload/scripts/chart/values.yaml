@@ -1,6 +1,8 @@
 # These values are populated by Kuiper at workload launch time from the fields
 # defined in templates/metadata.yaml. They must match field names exactly.
 name: PLUGIN
+# Ingress provider: envoy-gateway (default) or nginx
+_orion_ingress_provider: envoy-gateway
 user:
 registry: docker.io
 repo: PLUGIN
