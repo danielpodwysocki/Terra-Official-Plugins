@@ -44,8 +44,25 @@ spec:
             type: PathPrefix
             value: "/polaris/{{ .Values.name }}/"
       backendRefs:
-        - name: {{ .Values.name }}
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: {{ .Values.name }}-backend
           port: 3001
+---
+# Workstation viewer serves HTTPS on :3001 with a self-signed LSIO cert (the
+# nginx ingress used backend-protocol: HTTPS, unverified). Originate TLS via an
+# EG Backend — a plain backendRef sends cleartext to the TLS port -> 400.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: {{ .Values.name }}-backend
+spec:
+  endpoints:
+    - fqdn:
+        hostname: "{{ .Values.name }}.{{ .Release.Namespace }}.svc.cluster.local"
+        port: 3001
+  tls:
+    insecureSkipVerify: true
 {{- if not .Values.publicAccess }}
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
